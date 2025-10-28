@@ -1,0 +1,1 @@
+# kvantastica-motivation-calculator
