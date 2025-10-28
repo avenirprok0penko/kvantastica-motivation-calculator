@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>КВАНТАСТИКА · Калькулятор мотивации</title>
+<style>
+  :root{
+    --blue:#2b18df; --blue2:#1e10b6;
+    --yellow:#ffc73a; --orange:#ff6a2b; --cyan:#36d0e4;
+    --text:#1b1e28; --muted:#6b7280; --card:#fff; --soft:#f4f6ff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif;
+    color:var(--text);  
+    background:
+      linear-gradient(0deg, rgba(255,255,255,.06) 1px, transparent 1px) 0 0/100% 42px,
+      linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px) 0 0/42px 100%,
+      var(--blue);
+  }
+
+  /* синий холст + белый «лист» */
+  .frame{height:100vh; width:100vw; padding:80px 72px; position:relative}
+  .brand-top{position:absolute;left:72px;top:24px;color:#e8ebff}
+  .brand-top .logo{font-weight:900;letter-spacing:.14em;color:var(--yellow)}
+  .corner-note{position:absolute;right:72px;top:22px;color:#e8ebff;font-size:12px;line-height:1.35;text-align:right;max-width:520px}
+
+  .sheet{
+    min-height:calc(100vh - 160px);
+    width:calc(100vw - 144px);
+    background:var(--card); border:2px solid var(--blue2); border-radius:16px;
+    box-shadow:0 16px 40px rgba(0,0,0,.25);
+    display:flex; flex-direction:column; gap:14px;
+    padding:18px 20px;
+    overflow:auto; /* если недель много — скроллится лист */
+  }
+
+  h1{margin:0;font-size:24px}
+  .desc{color:var(--muted);font-size:13px}
+  .head{display:flex;gap:14px;align-items:center}
+
+  /* верхние поля */
+  .inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px}
+  input[type="number"],input[type="text"]{
+    width:100%;padding:12px;border-radius:12px;border:2px solid #e5e7eb;background:#fff;color:var(--text);
+  }
+  input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(43,24,223,.18)}
+
+  /* кнопки */
+  .btn{
+    appearance:none;border:2px solid #0e0a4a;padding:12px 16px;border-radius:10px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;
+    color:#0f1133;background:var(--yellow); box-shadow:4px 4px 0 0 var(--orange), inset 0 -2px 0 rgba(0,0,0,.08);
+  }
+  .btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 0 var(--orange)}
+  .btn-ghost{background:#fff;color:var(--text);border:2px dashed var(--cyan);box-shadow:none}
+  .btn-danger{background:var(--orange);color:#fff;border-color:#5c1604;box-shadow:4px 4px 0 0 #d34312}
+  .btn-danger:active{box-shadow:2px 2px 0 0 #d34312}
+
+  /* недели */
+  .weeks-wrap{display:grid;row-gap:10px}
+  .weeks-head{display:flex;justify-content:space-between;align-items:center}
+  .weeks{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .week{border:2px solid var(--blue2);border-radius:14px;background:#fff;padding:12px}
+  .week .cap{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .week h3{margin:0;font-size:18px;color:var(--blue)}
+  .week .row{display:grid;grid-template-columns:120px repeat(3,1fr);gap:10px}
+  .out{background:#f8fafc;border:2px dashed #e5e7eb}
+
+  /* итоги */
+  .footer{
+    display:grid;grid-template-columns:repeat(3,1fr) 1.4fr;gap:12px;align-items:center;background:var(--soft);
+    padding:10px;border:2px solid #eef2ff;border-radius:12px;margin-top:4px
+  }
+  .kpi{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;background:#fff;border:2px solid var(--blue2)}
+  .kpi b{font-size:18px}
+  .sum{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:12px;background:#fff;border:2px solid var(--blue2);font-weight:800}
+  .subtle{color:var(--muted);font-size:12px}
+
+  /* расшифровка */
+  details.breakdown{background:#fff;border:2px solid var(--blue2);border-radius:12px;padding:8px}
+  details.breakdown summary{cursor:pointer;font-weight:700}
+  .table-wrap{max-height:180px;overflow:auto;margin-top:8px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px 10px;text-align:right}
+  th{font-size:12px;color:var(--muted);text-transform:uppercase}
+  td{border-top:2px solid #eef2ff}
+  td:first-child,th:first-child{text-align:left}
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="brand-top">
+      <div class="logo">КВАНТАСТИКА</div>
+      <div style="font-size:12px">Калькулятор мотивации МВУ / продаж</div>
+    </div>
+    <div class="corner-note">
+      Версия v1
+    </div>
+
+    <div class="sheet" id="sheet">
+      <!-- шапка -->
+      <div class="head">
+        <h1>Калькулятор мотивации</h1>
+      </div>
+
+      <!-- верхние инпуты -->
+      <div class="inputs">
+        <div><label>Фикс, ₽</label><input id="fix" type="number" value="12000" min="0"></div>
+        <div><label>Стоимость одного ВУ, ₽</label><input id="costBU" type="number" value="320" min="0"></div>
+        <div><label>Проведено ВУ (шт.)</label><input id="buCount" type="number" value="0" min="0"></div>
+      </div>
+
+      <!-- недели с кнопками -->
+      <div class="weeks-wrap">
+        <div class="weeks-head">
+          <h2 style="margin:0;font-size:22px">Циклы (недели)</h2>
+          <div style="display:flex;gap:10px">
+            <button id="addWeek" class="btn">+ Добавить неделю</button>
+            <button id="resetWeeks" class="btn btn-ghost">Сбросить</button>
+          </div>
+        </div>
+        <div class="weeks" id="weeks"></div>
+        <div style="font-size:12px;color:var(--muted)">Мотивация = значение по таблице для <b>продажи − возвраты</b>, с масштабом по длине цикла.</div>
+      </div>
+
+      <!-- итоги -->
+      <div class="footer">
+        <div class="kpi"><span class="subtle">Фикс</span><b id="fixOut">12 000 ₽</b></div>
+        <div class="kpi"><span class="subtle">Выплаты за ВУ</span><b id="buOut">0 ₽</b></div>
+        <div class="kpi"><span class="subtle">Мотивация за циклы</span><b id="motOut">0 ₽</b></div>
+        <div class="sum"><span>ИТОГО к выплате</span><b id="grandOut">12 000 ₽</b></div>
+      </div>
+
+      <!-- расшифровка (по умолчанию свернута) -->
+      <details class="breakdown">
+        <summary>Расшифровка по неделям</summary>
+        <div class="table-wrap">
+          <table id="breakdown">
+            <thead>
+              <tr><th>Неделя</th><th>Дней</th><th>Продаж</th><th>Возвратов</th><th>Чистые</th><th>Мотивация, ₽</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </div>
+
+<script>
+  // инкрементальные выплаты
+  const perSale=[0,2000,6000,11000,16000,17000,20000,20000,20000,20000,20000,20000,20000,20000];
+  const cumulative=n=>{if(n<=0)return 0; if(n>13)n=13; let s=0; for(let i=1;i<=n;i++) s+=perSale[i]??20000; return s;}
+  const fmt=n=>n.toLocaleString('ru-RU')+' ₽';
+
+  const weeksEl=document.getElementById('weeks');
+  const addBtn=document.getElementById('addWeek');
+  const resetBtn=document.getElementById('resetWeeks');
+
+  function weekCard(idx){
+    const w=document.createElement('div'); w.className='week';
+    w.innerHTML=`
+      <div class="cap">
+        <h3>Н${idx+1}</h3>
+        <button class="btn btn-danger" data-act="remove">Удалить</button>
+      </div>
+      <div class="row">
+        <div>
+          <label>Длина цикла (дней)</label>
+          <input type="number" min="1" value="7" data-key="days">
+        </div>
+        <div>
+          <label>Продаж</label>
+          <input type="number" min="0" value="0" data-key="sales">
+        </div>
+        <div>
+          <label>Возвратов</label>
+          <input type="number" min="0" value="0" data-key="refunds">
+        </div>
+        <div>
+          <label>Мотивация, ₽</label>
+          <input class="out" type="text" value="0 ₽" data-key="payout" disabled>
+        </div>
+      </div>`;
+    // обработчики только на эту карточку
+    w.addEventListener('input', recalc);
+    w.querySelector('[data-act="remove"]').addEventListener('click',()=>{w.remove(); renumber(); recalc();});
+    return w;
+  }
+
+  function renumber(){
+    [...weeksEl.querySelectorAll('.week')].forEach((w,i)=>{ w.querySelector('h3').textContent='Н'+(i+1); });
+  }
+
+  function addDefault(){ weeksEl.innerHTML=''; for(let i=0;i<4;i++) weeksEl.appendChild(weekCard(i)); }
+  addDefault();
+
+  addBtn.addEventListener('click',()=>{
+    weeksEl.appendChild(weekCard(weeksEl.children.length));
+    renumber();
+    recalc();
+  });
+
+  resetBtn.addEventListener('click',()=>{ addDefault(); recalc(); });
+
+  function recalc(){
+    let mot=0; const rows=[];
+    [...weeksEl.querySelectorAll('.week')].forEach((w,i)=>{
+      const days=+w.querySelector('[data-key="days"]').value||7;
+      const sales=+w.querySelector('[data-key="sales"]').value||0;
+      const refunds=Math.min(+w.querySelector('[data-key="refunds"]').value||0, sales);
+      const net=Math.max(sales-refunds,0);
+      const payout=Math.round(cumulative(net)*(days/7));
+      w.querySelector('[data-key="payout"]').value=payout.toLocaleString('ru-RU')+' ₽';
+      mot+=payout; rows.push({i:i+1,days,sales,refunds,net,payout});
+    });
+
+    const fix=+document.getElementById('fix').value||0;
+    const bu=(+document.getElementById('costBU').value||0)*(+document.getElementById('buCount').value||0);
+    document.getElementById('motOut').textContent=fmt(mot);
+    document.getElementById('fixOut').textContent=fmt(fix);
+    document.getElementById('buOut').textContent=fmt(bu);
+    document.getElementById('grandOut').textContent=fmt(mot+fix+bu);
+    renumber();
+
+    // расшифровка
+    const tbody=document.querySelector('#breakdown tbody');
+    tbody.innerHTML=rows.map(r=>`<tr>
+      <td>Н${r.i}</td><td>${r.days}</td><td>${r.sales}</td><td>${r.refunds}</td><td>${r.net}</td>
+      <td>${r.payout.toLocaleString('ru-RU')}</td>
+    </tr>`).join('');
+  }
+
+  ['fix','costBU','buCount'].forEach(id=>document.getElementById(id).addEventListener('input', recalc));
+  recalc();
+</script>
+</body>
+</html>
